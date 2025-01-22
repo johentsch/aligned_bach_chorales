@@ -7,3 +7,6 @@
 [submodule "DCMLab_cap"]
 	path = DCMLab_cap
 	url = https://github.com/DCMLab/bach_chorales.git
+[submodule "389_chorale_settings"]
+	path = 389_chorale_settings
+	url = https://github.com/johentsch/389_chorale_settings.git
