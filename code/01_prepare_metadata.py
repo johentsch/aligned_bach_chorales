@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.16.6
 #   kernelspec:
-#     display_name: base
+#     display_name: Python 3 (ipykernel)
 #     language: python
-#     name: base
+#     name: python3
 # ---
 
 # %% [markdown]
@@ -88,9 +88,22 @@ dcml_chorales = os.path.expanduser("../DCMLab_cap/MS3")
 cap_files = get_dcml_files(dcml_chorales, extension='.mscx', remove_extension=False)
 title_list = [fname_title[0] if fname_title else None for fname_title in cap_files.values()]
 
+# %% [markdown]
+# ## Load the chorales table from Wikipedia
+#
+# This is the table found on https://en.wikipedia.org/wiki/List_of_chorale_harmonisations_by_Johann_Sebastian_Bach, converted to CSV via https://wikitable2csv.ggor.de/.
+
+# %%
+wikitable = pd.read_csv("389_chorale_settings.csv", dtype={
+    "389": "Int64",
+    "Riemenschneider": "Int64",
+})
+
 
 # %% [markdown]
-# ## Assemble the `riemenschneider.csv` table
+# ## Assemble the `riemenschneider.csv` and `mapping_table.csv` table
+#
+# The former will serve the mapping between the 3 datasets (seemingly) organized according to the Riemenschneider catalogue. Whereas the latter will be used to align Riemenschneider chorales with Breitkopf's "purple bible", *389 Choralgesänge*. 
 
 # %%
 def clean_bwv(bwv_str):
@@ -111,13 +124,24 @@ def make_bwv_column(S):
     return S.rename('bwv')
 
 def make_integer_column(S):
-    return S.str.split("[.=]").map(lambda l: int(l[0]))
+    return S.str.split("[.=]").map(lambda l: int(l[0])).astype("Int64")
 
 print("Assembling metadata...")
 riemenschneider = bct[bct.R.notna()].copy()
 riemenschneider["Riemenschneider"] = make_integer_column(riemenschneider.R)
 riemenschneider = riemenschneider.set_index("Riemenschneider").sort_index()
 riemenschneider.insert(3, "CPE", make_integer_column(riemenschneider.B))
+
+mapping_table = pd.merge(
+    left=riemenschneider,
+    right=wikitable,
+    how="outer",
+    on="Riemenschneider",
+    suffixes=(None, "_wiki")
+).sort_values("389").reset_index(drop=True)
+mapping_table.to_csv("mapping_table.csv", index=False)
+print("Stored mapping_table.csv")
+
 riemenschneider = pd.concat([
     krn_metadata.title.rename('krn_title'),
     pd.Series([f"chor{str(i).zfill(3)}.krn" if i != 150 else None for i in range(1, 372)], index=riemenschneider.index, name='krn_file'),
@@ -131,3 +155,4 @@ print("Stored metadata to riemenschneider.csv")
 riemenschneider
 
 # %%
+mapping_table
